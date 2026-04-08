@@ -1,0 +1,8 @@
+{
+    "author": ["Samoth"],
+    "install_msg": "Thank you for installing Samoth-Cogs! Use `[p]help` to explore available commands.",
+    "name": "Samoth-Cogs",
+    "short": "A collection of cogs for Red-DiscordBot by Samoth.",
+    "description": "A collection of cogs for Red-DiscordBot by Samoth.",
+    "tags": ["utility", "pokemon", "games"]
+}
