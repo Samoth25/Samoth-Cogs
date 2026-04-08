@@ -40,9 +40,28 @@ class RegistrationView(ui.View):
         super().__init__(timeout=None)
         self.cog = cog
         self.battle = battle
+        self._refresh()
 
-    @ui.button(label="Participer", style=discord.ButtonStyle.success, emoji="⚔️")
-    async def join(self, interaction: discord.Interaction, button: ui.Button) -> None:
+    def _refresh(self) -> None:
+        """Reconstruit les boutons selon l'état actuel de l'inscription."""
+        self.clear_items()
+
+        join_btn = ui.Button(
+            label="Participer", style=discord.ButtonStyle.success, emoji="⚔️"
+        )
+        join_btn.callback = self._join
+        self.add_item(join_btn)
+
+        if self.battle["player1_id"] is not None:
+            cancel_btn = ui.Button(
+                label="Annuler mon inscription",
+                style=discord.ButtonStyle.secondary,
+                emoji="❌",
+            )
+            cancel_btn.callback = self._cancel
+            self.add_item(cancel_btn)
+
+    async def _join(self, interaction: discord.Interaction) -> None:
         battle = self.battle
         user_id = interaction.user.id
 
@@ -58,20 +77,39 @@ class RegistrationView(ui.View):
 
         if battle["player1_id"] is None:
             battle["player1_id"] = user_id
-            embed = self.cog._embed_registration(battle)
-            await interaction.response.edit_message(embed=embed, view=self)
+            self._refresh()
+            await interaction.response.edit_message(
+                embed=self.cog._embed_registration(battle), view=self
+            )
 
         elif battle["player2_id"] is None:
             battle["player2_id"] = user_id
             battle["status"] = "active"
-            embed = self.cog._embed_active(battle)
-            view = BattleWaitingLobbyView(self.cog, battle)
-            await interaction.response.edit_message(embed=embed, view=view)
+            await interaction.response.edit_message(
+                embed=self.cog._embed_active(battle),
+                view=BattleWaitingLobbyView(self.cog, battle),
+            )
 
         else:
             await interaction.response.send_message(
                 "Ce combat est déjà complet !", ephemeral=True
             )
+
+    async def _cancel(self, interaction: discord.Interaction) -> None:
+        battle = self.battle
+        user_id = interaction.user.id
+
+        if user_id != battle["player1_id"]:
+            return await interaction.response.send_message(
+                "Vous n'êtes pas inscrit à ce combat.", ephemeral=True
+            )
+
+        battle["player1_id"] = None
+        self._refresh()
+        await interaction.response.edit_message(
+            embed=self.cog._embed_registration(battle), view=self
+        )
+        await interaction.followup.send("✅ Inscription annulée.", ephemeral=True)
 
 
 class BattleWaitingLobbyView(ui.View):
